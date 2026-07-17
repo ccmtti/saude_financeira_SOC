@@ -271,23 +271,25 @@ st.markdown("""
         .print-only-table table {
             width: 100%;
             border-collapse: collapse;
-            font-size: .72rem;
+            font-size: .60rem; /* Fonte menor para caber no Retrato */
             color: #111;
             margin-bottom: .8rem;
+            table-layout: auto;
+            word-break: break-word;
         }
         .print-only-table th {
             background: #f0faf8;
             color: #005850;
             font-weight: 600;
             border: 1px solid #b0d4cf;
-            padding: 5px 8px;
+            padding: 3px 4px; /* Padding reduzido */
             text-align: left;
         }
         .print-only-table td {
             background: white;
             color: #222;
             border: 1px solid #cbd5e1;
-            padding: 4px 8px;
+            padding: 3px 4px; /* Padding reduzido */
         }
         .print-only-table tr:nth-child(even) td {
             background: #f8fdfb;
