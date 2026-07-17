@@ -498,7 +498,14 @@ def buscar_faturamento_historico(cliente_soap, empresa_trabalho, meses_historico
         rotina = f"Faturamento ({mes}/{ano})"
         # IMPORTANTE: NÃO passar log_container para threads secundárias —
         # Streamlit levanta NoSessionContext ao chamar st.write() fora da main thread.
-        return fazer_requisicao_soc(cliente_soap, payload, rotina, None)
+        dados = fazer_requisicao_soc(cliente_soap, payload, rotina, None)
+        
+        # Injeta a ordem cronológica no dicionário para podermos pegar o valor mais atual depois
+        if isinstance(dados, list):
+            for d in dados:
+                d['_ANO_MES_ORDEM'] = f"{ano}-{mes}"
+                
+        return dados
 
     # LIMITE DE SEGURANÇA: max_workers=4
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -568,6 +575,10 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
         if datas_validas:
             data_assinatura = datas_validas[0]
 
+    # Ordena para garantir que o "last()" no groupby pegue o mês mais recente
+    if '_ANO_MES_ORDEM' in df_fat.columns:
+        df_fat = df_fat.sort_values(by='_ANO_MES_ORDEM', ascending=True)
+
     df_fat['Custo_Por_Funcionario'] = df_fat.apply(
         lambda row: row['VALOR_TOTAL_PRODUTO'] / row['QUANTIDADE_VIDAS_ATIVAS']
         if row['QUANTIDADE_VIDAS_ATIVAS'] > 0 else 0,
@@ -576,53 +587,89 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
 
     resumo_produtos = df_fat.groupby(['CODIGO_PRODUTO', 'NOME_PRODUTO']).agg(
         Total_Cobrado_Periodo=('VALOR_TOTAL_PRODUTO', 'sum'),
-        Media_Vidas_Cobradas=('QUANTIDADE_VIDAS_ATIVAS', 'mean'),
-        Custo_Medio_Por_Vida=('Custo_Por_Funcionario', 'mean')
+        Ultima_Qtd_Vidas=('QUANTIDADE_VIDAS_ATIVAS', 'last'),
+        Custo_Medio_Por_Vida=('Custo_Por_Funcionario', 'last')
     ).reset_index()
 
     if not df_precos.empty:
         col_prod = 'codigoProduto' if 'codigoProduto' in df_precos.columns else 'CODIGOPRODUTO'
         col_vmin = 'valorMinimo' if 'valorMinimo' in df_precos.columns else 'VALORMINIMO'
         col_mvid = 'minimoVidas' if 'minimoVidas' in df_precos.columns else 'MINIMOVIDAS'
+        
+        # Novas colunas solicitadas para classificação de Mensalidade
+        col_vvm = 'valorVidaMes' if 'valorVidaMes' in df_precos.columns else 'VALORVIDAMES'
+        col_vm = 'valorMensal' if 'valorMensal' in df_precos.columns else 'VALORMENSAL'
 
-        df_precos_red = df_precos[[col_prod, col_vmin, col_mvid]].copy()
+        # Garantir que extraímos as colunas que existem
+        cols_extract = [col_prod, col_vmin, col_mvid]
+        if col_vvm in df_precos.columns: cols_extract.append(col_vvm)
+        if col_vm in df_precos.columns: cols_extract.append(col_vm)
+
+        df_precos_red = df_precos[cols_extract].copy()
         df_precos_red.rename(columns={col_prod: 'CODIGO_PRODUTO'}, inplace=True)
 
         df_precos_red[col_vmin] = tratar_valor_numerico(df_precos_red, col_vmin)
         df_precos_red[col_mvid] = tratar_valor_numerico(df_precos_red, col_mvid)
+        
+        if col_vvm in df_precos_red.columns:
+            df_precos_red[col_vvm] = tratar_valor_numerico(df_precos_red, col_vvm)
+        if col_vm in df_precos_red.columns:
+            df_precos_red[col_vm] = tratar_valor_numerico(df_precos_red, col_vm)
+            
+        def classificar_cobranca(row):
+            # Se for > 0 em valorVidaMes ou valorMensal, o SOC considera cobrança contínua (Mensalidade)
+            v = row.get(col_vvm, 0)
+            m = row.get(col_vm, 0)
+            if v > 0 or m > 0:
+                return True
+            return False
+
+        df_precos_red['Is_Mensalidade_SOC'] = df_precos_red.apply(classificar_cobranca, axis=1)
         df_precos_red.drop_duplicates(subset=['CODIGO_PRODUTO'], inplace=True)
+
+        # Guarda a lista de códigos que são mensalidades segundo o SOC
+        codigos_mensalidades = df_precos_red[df_precos_red['Is_Mensalidade_SOC']]['CODIGO_PRODUTO'].tolist()
 
         resumo_produtos = pd.merge(resumo_produtos, df_precos_red, on='CODIGO_PRODUTO', how='left')
         resumo_produtos.rename(columns={
             col_vmin: 'Faturamento_Minimo_Valor (R$)',
-            col_mvid: 'Faturamento_Minimo_Vidas'
+            col_mvid: 'Faturamento_Minimo_Vidas',
+            'Ultima_Qtd_Vidas': 'Media_Vidas_Cobradas' # Mantém o nome interno igual para não quebrar a UI
         }, inplace=True)
     else:
+        codigos_mensalidades = []
         resumo_produtos['Faturamento_Minimo_Valor (R$)'] = 0
         resumo_produtos['Faturamento_Minimo_Vidas'] = 0
+        resumo_produtos.rename(columns={'Ultima_Qtd_Vidas': 'Media_Vidas_Cobradas'}, inplace=True)
 
-    resumo_produtos_sintese = resumo_produtos.drop(columns=['CODIGO_PRODUTO'])
+    # Identifica se é mensalidade pelo NOME ou pela REGRA DE PREÇO (SOC)
+    mask_mens = (
+        resumo_produtos['NOME_PRODUTO'].astype(str).str.upper().str.startswith('MENSALIDADE', na=False) |
+        resumo_produtos['CODIGO_PRODUTO'].isin(codigos_mensalidades)
+    )
 
-    # Filtro para separar Mensalidades dos Demais Produtos
-    mask_mens = resumo_produtos_sintese['NOME_PRODUTO'].astype(str).str.upper().str.startswith('MENSALIDADE', na=False)
+    # Separação Original (Excel)
+    resumo_produtos_mensalidades = resumo_produtos[mask_mens].copy()
+    resumo_produtos_demais = resumo_produtos[~mask_mens].copy()
+
+    # Separação Sintese (Tela)
+    resumo_produtos_sintese = resumo_produtos.drop(columns=['CODIGO_PRODUTO', 'Is_Mensalidade_SOC', col_vvm, col_vm], errors='ignore')
     resumo_mensalidades = resumo_produtos_sintese[mask_mens].copy()
     resumo_demais = resumo_produtos_sintese[~mask_mens].copy()
 
-    # O resumo original também será dividido para as abas separadas do Excel
-    mask_mens_orig = resumo_produtos['NOME_PRODUTO'].astype(str).str.upper().str.startswith('MENSALIDADE', na=False)
-    resumo_produtos_mensalidades = resumo_produtos[mask_mens_orig].copy()
-    resumo_produtos_demais = resumo_produtos[~mask_mens_orig].copy()
-
-    # Filtros de produtos
+    # Filtros de produtos Base Completa (df_fat)
     nome_produto_upper = df_fat['NOME_PRODUTO'].astype(str).str.upper()
-
-    mask_mensalidade = nome_produto_upper.str.startswith('MENSALIDADE', na=False)
+    
+    mask_mensalidade_df = (
+        nome_produto_upper.str.startswith('MENSALIDADE', na=False) |
+        df_fat['CODIGO_PRODUTO'].isin(codigos_mensalidades)
+    )
     mask_exames = nome_produto_upper.str.startswith('EXAME', na=False)
     mask_mensageria = nome_produto_upper.str.startswith('MENSAGERIA', na=False)
 
-    df_mensalidades = df_fat[mask_mensalidade].copy()
+    df_mensalidades = df_fat[mask_mensalidade_df].copy()
 
-    mask_avulsos = ~(mask_mensalidade | mask_exames | mask_mensageria)
+    mask_avulsos = ~(mask_mensalidade_df | mask_exames | mask_mensageria)
     df_avulsos = df_fat[mask_avulsos].copy()
 
     avulsos_detalhado = df_avulsos[
