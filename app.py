@@ -238,7 +238,7 @@ st.markdown("""
 
         /* O truque mágico para não cortar a direita no Retrato (Cross-browser) */
         body, html {
-            zoom: 70% !important; /* Chrome, Edge, Safari */
+            zoom: 90% !important; /* Aumentado para 90% para ficar mais legível */
             width: 100% !important;
             max-width: 100% !important;
             overflow-x: hidden !important; /* Esconde qualquer vazamento fantasma */
@@ -247,9 +247,9 @@ st.markdown("""
         /* Fallback específico para o Mozilla Firefox */
         @-moz-document url-prefix() {
             body {
-                transform: scale(0.70) !important;
+                transform: scale(0.90) !important;
                 transform-origin: top left !important;
-                width: 142% !important;
+                width: 111% !important;
             }
         }
 
@@ -304,7 +304,7 @@ st.markdown("""
         .print-only-table table {
             width: 100%;
             border-collapse: collapse;
-            font-size: .60rem; /* Fonte menor para caber no Retrato */
+            font-size: .75rem; /* Fonte aumentada para leitura */
             color: #111;
             margin-bottom: .8rem;
             table-layout: auto;
