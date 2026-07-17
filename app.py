@@ -311,6 +311,30 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
+# SISTEMA DE LOGIN DE SEGURANÇA
+# ==========================================
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.markdown('<div class="hero-banner" style="margin-top: 3rem;"><h1>🔒 Acesso Restrito</h1><p>Insira suas credenciais corporativas para acessar o painel.</p></div>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        with st.form("login_form"):
+            usuario = st.text_input("Usuário")
+            senha = st.text_input("Senha", type="password")
+            submit = st.form_submit_button("Entrar no Sistema")
+            
+            if submit:
+                if usuario == "ccmt" and senha == "consulta@04109":
+                    st.session_state["autenticado"] = True
+                    st.rerun()
+                else:
+                    st.error("Usuário ou senha incorretos. Acesso negado.")
+    st.stop()
+
+# ==========================================
 # CONFIGURAÇÕES DE ACESSO AO SOC
 # ==========================================
 EMPRESA_LOGADA = "323506"
