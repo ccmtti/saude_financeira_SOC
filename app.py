@@ -558,6 +558,14 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     df_precos = df_precos.copy()
 
     df_fat.columns = df_fat.columns.str.upper()
+    
+    # 🚫 REGRA NOVA: Excluir totalmente produtos de DESCONTO da análise
+    if 'NOME_PRODUTO' in df_fat.columns:
+        mask_desconto = df_fat['NOME_PRODUTO'].astype(str).str.upper().str.contains('DESCONTO', na=False)
+        df_fat = df_fat[~mask_desconto].copy()
+
+    if df_fat.empty:
+        return None
     if not df_precos.empty:
         df_precos.columns = [col.strip() for col in df_precos.columns]
 
@@ -664,6 +672,32 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     resumo_produtos_sintese = resumo_produtos.drop(columns=['CODIGO_PRODUTO', 'Is_Mensalidade_SOC', col_vvm, col_vm], errors='ignore')
     resumo_mensalidades = resumo_produtos_sintese[mask_mens].copy()
     resumo_demais = resumo_produtos_sintese[~mask_mens].copy()
+
+    # Adicionar Totalizadores de Mensalidades
+    if not resumo_mensalidades.empty:
+        soma_custo_vida = resumo_mensalidades.loc[resumo_mensalidades['Media_Vidas_Cobradas'] > 0, 'Custo_Medio_Por_Vida'].sum()
+        linha_total_sintese = pd.DataFrame([{
+            'NOME_PRODUTO': '➡️ TOTAL',
+            'Total_Cobrado_Periodo': resumo_mensalidades['Total_Cobrado_Periodo'].sum(),
+            'Media_Vidas_Cobradas': None,
+            'Custo_Medio_Por_Vida': soma_custo_vida,
+            'Faturamento_Minimo_Valor (R$)': resumo_mensalidades['Faturamento_Minimo_Valor (R$)'].sum(),
+            'Faturamento_Minimo_Vidas': None
+        }])
+        resumo_mensalidades = pd.concat([resumo_mensalidades, linha_total_sintese], ignore_index=True)
+
+    if not resumo_produtos_mensalidades.empty:
+        soma_custo_vida = resumo_produtos_mensalidades.loc[resumo_produtos_mensalidades['Media_Vidas_Cobradas'] > 0, 'Custo_Medio_Por_Vida'].sum()
+        linha_total_excel = pd.DataFrame([{
+            'CODIGO_PRODUTO': '',
+            'NOME_PRODUTO': '➡️ TOTAL',
+            'Total_Cobrado_Periodo': resumo_produtos_mensalidades['Total_Cobrado_Periodo'].sum(),
+            'Media_Vidas_Cobradas': None,
+            'Custo_Medio_Por_Vida': soma_custo_vida,
+            'Faturamento_Minimo_Valor (R$)': resumo_produtos_mensalidades['Faturamento_Minimo_Valor (R$)'].sum(),
+            'Faturamento_Minimo_Vidas': None
+        }])
+        resumo_produtos_mensalidades = pd.concat([resumo_produtos_mensalidades, linha_total_excel], ignore_index=True)
 
     # Filtros de produtos Base Completa (df_fat)
     nome_produto_upper = df_fat['NOME_PRODUTO'].astype(str).str.upper()
@@ -956,8 +990,8 @@ def _exibir_empresa(res):
     col_config = {
         "NOME_PRODUTO": st.column_config.TextColumn("Produto", width="large"),
         "Total_Cobrado_Periodo": st.column_config.NumberColumn("Total Cobrado (R$)", format="R$ %.2f"),
-        "Media_Vidas_Cobradas": st.column_config.NumberColumn("Média Vidas", format="%.1f"),
-        "Custo_Medio_Por_Vida": st.column_config.NumberColumn("Custo Médio / Vida (R$)", format="R$ %.2f"),
+        "Media_Vidas_Cobradas": st.column_config.NumberColumn("Vidas (Atual)", format="%.0f"),
+        "Custo_Medio_Por_Vida": st.column_config.NumberColumn("Custo / Vida (Atual)", format="R$ %.2f"),
         "Faturamento_Minimo_Valor (R$)": st.column_config.NumberColumn("Fat. Mínimo (R$)", format="R$ %.2f"),
         "Faturamento_Minimo_Vidas": st.column_config.NumberColumn("Mín. Vidas", format="%.0f"),
     }
@@ -965,8 +999,8 @@ def _exibir_empresa(res):
     html_cols = {
         "NOME_PRODUTO": "Produto",
         "Total_Cobrado_Periodo": "Total Cobrado (R$)",
-        "Media_Vidas_Cobradas": "Média Vidas",
-        "Custo_Medio_Por_Vida": "Custo Médio / Vida (R$)",
+        "Media_Vidas_Cobradas": "Vidas (Atual)",
+        "Custo_Medio_Por_Vida": "Custo / Vida (Atual)",
         "Faturamento_Minimo_Valor (R$)": "Faturamento Mínimo (R$)",
         "Faturamento_Minimo_Vidas": "Mínimo Vidas"
     }
