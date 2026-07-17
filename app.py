@@ -722,9 +722,11 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     if 'DATA_COBRANCA' in avulsos_detalhado.columns:
         avulsos_detalhado.sort_values(by='DATA_COBRANCA', ascending=False, inplace=True)
 
-    custo_total_mensalidade_por_funcionario = (
-        df_mensalidades.groupby('NOME_PRODUTO')['Custo_Por_Funcionario'].mean().sum()
-    )
+    custo_total_mensalidade_por_funcionario = 0
+    if 'Custo_Medio_Por_Vida' in resumo_mensalidades.columns:
+        # Exclui a linha de "TOTAL" para não duplicar, caso exista
+        df_calc = resumo_mensalidades[resumo_mensalidades['NOME_PRODUTO'] != '➡️ TOTAL']
+        custo_total_mensalidade_por_funcionario = df_calc.loc[df_calc['Media_Vidas_Cobradas'] > 0, 'Custo_Medio_Por_Vida'].sum()
 
     data_atual = datetime.now()
     data_fim_str = data_atual.strftime('%m/%Y')
