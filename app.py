@@ -130,8 +130,8 @@ st.markdown("""
         overflow: hidden;
     }
 
-    /* ---------- Tabela só para impressão ---------- */
-    .print-only-table, .print-only-status {
+    /* ---------- Tabela e Métricas só para impressão ---------- */
+    .print-only-table, .print-only-status, .print-custom-metrics {
         display: none !important;
     }
 
@@ -236,9 +236,9 @@ st.markdown("""
             height: auto !important;
         }
 
-        /* O truque mágico para não cortar a direita no Retrato (Cross-browser) */
+        /* Reset total da escala e largura para o padrão natural 100% */
         body, html {
-            zoom: 75% !important; /* Retorna a 75% para garantir encaixe perfeito no papel */
+            zoom: 100% !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -247,9 +247,8 @@ st.markdown("""
         /* Fallback específico para o Mozilla Firefox */
         @-moz-document url-prefix() {
             body {
-                transform: scale(0.75) !important;
-                transform-origin: top left !important;
-                width: 133% !important; /* Compensa a escala */
+                transform: none !important;
+                width: 100% !important;
             }
         }
 
@@ -258,21 +257,47 @@ st.markdown("""
             max-width: 100% !important;
         }
 
-        /* Metric cards para impressão */
-        div[data-testid="stMetric"] {
-            background: #f0faf8 !important;
-            border: 1px solid #009f8f !important;
-            box-shadow: none !important;
-            break-inside: avoid;
-            padding: 6px 8px !important;
+        /* Esconde as métricas nativas do Streamlit na impressão */
+        div[data-testid="stMetric"], 
+        div[data-testid="stHorizontalBlock"] {
+            display: none !important;
         }
-        div[data-testid="stMetric"] label {
-            color: #005850 !important;
-            font-size: .85rem !important; /* Aumenta a fonte pra compensar o zoom 75% */
+
+        /* Nossas "Caixas" de resumo exclusivas para impressão */
+        .print-custom-metrics {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 20px;
         }
-        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-            color: #003d35 !important;
-            font-size: 1.15rem !important; /* Aumenta a fonte pra compensar o zoom 75% */
+
+        .print-box {
+            border: 1px solid #b0d4cf;
+            background: #f0faf8;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            flex: 1 1 30%; /* 3 caixas por linha por padrão */
+        }
+
+        .print-box-large {
+            flex: 1 1 50%; /* Nome da empresa ocupa metade da linha */
+        }
+
+        .print-box label {
+            display: block;
+            color: #005850;
+            font-size: 8pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .print-box .val {
+            color: #111;
+            font-size: 11pt;
+            font-weight: 700;
         }
 
         /* Títulos de seção */
@@ -288,7 +313,7 @@ st.markdown("""
         .print-only-table table {
             width: 100% !important;
             border-collapse: collapse;
-            font-size: 13pt !important; /* 13pt * 0.75 (zoom) = ~10pt reais legíveis! */
+            font-size: 9pt !important; /* Tamanho natural */
             color: #111;
             margin-bottom: .8rem;
             table-layout: fixed !important; /* O SEGREDO para não deixar cortar a direita */
@@ -1026,21 +1051,37 @@ def _exibir_empresa(res):
     # ── SEÇÃO 1: RESUMO GERAL (Metrics) ──
     st.markdown('<div class="section-title">📋 Resumo Geral do Contrato</div>', unsafe_allow_html=True)
 
-    # Linha 1: Focada no nome da empresa (Razão Social costuma ser longa)
+    # NATIVO STREAMLIT (Só aparece na tela normal)
     c1, c2 = st.columns([2, 1])
     c1.metric("Razão Social", res["razao_social"])
     c2.metric("Funcionários Ativos", f'{res["qtd_ativos"]:,}'.replace(",", "."))
 
-    # Linha 2: Focada no Faturamento
     c3, c4 = st.columns(2)
     c3.metric("Faturamento Total (R$)", f'R$ {res["faturamento_total"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."))
     c4.metric("Custo Mensalidade / Func.", f'R$ {res["custo_mensalidade_func"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."))
 
-    # Linha 3: Focada nas datas
     c5, c6, c7 = st.columns(3)
     c5.metric("Período Avaliado", res["periodo"])
     c6.metric("Meses Analisados", res["meses"])
     c7.metric("Data Assinatura Contrato", str(res["data_assinatura"]))
+
+    # CUSTOMIZADO HTML (CAIXAS DIVs - Só aparece na impressão)
+    val_qtd = f'{res["qtd_ativos"]:,}'.replace(",", ".")
+    val_fat = f'R$ {res["faturamento_total"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")
+    val_custo = f'R$ {res["custo_mensalidade_func"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")
+    
+    html_metrics = f"""
+    <div class="print-custom-metrics">
+        <div class="print-box print-box-large"><label>Razão Social</label><div class="val">{res["razao_social"]}</div></div>
+        <div class="print-box"><label>Funcionários Ativos</label><div class="val">{val_qtd}</div></div>
+        <div class="print-box"><label>Faturamento Total (R$)</label><div class="val">{val_fat}</div></div>
+        <div class="print-box"><label>Custo Mensalidade / Func.</label><div class="val">{val_custo}</div></div>
+        <div class="print-box"><label>Período Avaliado</label><div class="val">{res["periodo"]}</div></div>
+        <div class="print-box"><label>Meses Analisados</label><div class="val">{res["meses"]}</div></div>
+        <div class="print-box"><label>Data Assinatura Contrato</label><div class="val">{res["data_assinatura"]}</div></div>
+    </div>
+    """
+    st.markdown(html_metrics, unsafe_allow_html=True)
 
     # ── SEÇÃO 2: TABELAS DE PRODUTOS ──
     col_config = {
