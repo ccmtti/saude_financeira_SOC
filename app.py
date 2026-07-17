@@ -254,15 +254,18 @@ st.markdown("""
             }
         }
 
-        /* BLINDAGEM DA LARGURA */
+        /* BLINDAGEM MÁXIMA DA LARGURA */
         .block-container,
         section[data-testid="stMain"],
         [data-testid="stAppViewContainer"],
-        [data-testid="stAppViewBlockContainer"] {
-            max-width: 100% !important;
+        [data-testid="stAppViewBlockContainer"],
+        [data-testid="stMarkdownContainer"],
+        .print-only-table {
+            max-width: 100vw !important;
             min-width: 100% !important;
             width: 100% !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
         }
         
         /* Permite que colunas possam se comportar naturalmente */
@@ -904,7 +907,16 @@ def _df_to_print_html(df, col_labels=None):
 
     return (
         '<div class="print-only-table">'
-        f'<table><thead><tr>{headers}</tr></thead>'
+        '<table style="width: 100% !important; max-width: 100% !important; table-layout: fixed !important;">'
+        '<colgroup>'
+        '<col style="width: 40%;">'
+        '<col style="width: 16%;">'
+        '<col style="width: 12%;">'
+        '<col style="width: 12%;">'
+        '<col style="width: 12%;">'
+        '<col style="width: 8%;">'
+        '</colgroup>'
+        f'<thead><tr>{headers}</tr></thead>'
         f'<tbody>{"".join(rows)}</tbody></table></div>'
     )
 
