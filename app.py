@@ -236,20 +236,21 @@ st.markdown("""
             height: auto !important;
         }
 
-        /* O truque mágico para não cortar a direita no Retrato (Cross-browser) */
+        /* Reset total da escala e largura para o padrão natural */
         body, html {
-            zoom: 90% !important; /* Aumentado para 90% para ficar mais legível */
+            zoom: 100% !important;
             width: 100% !important;
             max-width: 100% !important;
-            overflow-x: hidden !important; /* Esconde qualquer vazamento fantasma */
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-x: hidden !important;
         }
 
         /* Fallback específico para o Mozilla Firefox */
         @-moz-document url-prefix() {
             body {
-                transform: scale(0.90) !important;
-                transform-origin: top left !important;
-                width: 111% !important;
+                transform: none !important;
+                width: 100% !important;
             }
         }
 
@@ -264,14 +265,17 @@ st.markdown("""
             padding: 0 !important;
         }
         
-        /* Permite que as colunas dos cards (Metrics) caiam pra linha de baixo se faltar espaço */
+        /* FORÇA os cards de métrica a fazerem um quadrado (2 em cima, 2 embaixo) */
         [data-testid="stHorizontalBlock"] {
+            display: flex !important;
             flex-wrap: wrap !important;
+            width: 100% !important;
         }
         [data-testid="column"] {
-            min-width: 0 !important;
-            flex: 1 1 200px !important; /* Permite espremer e pular de linha */
-            margin-bottom: 10px !important;
+            flex: 0 0 48% !important; /* Exatamente metade da largura */
+            max-width: 48% !important;
+            min-width: 48% !important;
+            margin-bottom: 5px !important;
         }
 
         /* Metric cards para impressão */
@@ -302,27 +306,33 @@ st.markdown("""
 
         /* Estilo da tabela HTML de impressão */
         .print-only-table table {
-            width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
             border-collapse: collapse;
-            font-size: .75rem; /* Fonte aumentada para leitura */
+            font-size: 9pt !important; /* Tamanho confortável para leitura em papel */
             color: #111;
             margin-bottom: .8rem;
-            table-layout: auto;
-            word-break: break-word;
+            table-layout: fixed !important; /* O SEGREDO para não deixar cortar a direita */
         }
         .print-only-table th {
             background: #f0faf8;
             color: #005850;
             font-weight: 600;
             border: 1px solid #b0d4cf;
-            padding: 3px 4px; /* Padding reduzido */
+            padding: 4px;
             text-align: left;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
         }
         .print-only-table td {
             background: white;
             color: #222;
             border: 1px solid #cbd5e1;
-            padding: 3px 4px; /* Padding reduzido */
+            padding: 4px;
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
         }
         .print-only-table tr:nth-child(even) td {
             background: #f8fdfb;
