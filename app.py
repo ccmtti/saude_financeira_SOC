@@ -265,17 +265,11 @@ st.markdown("""
             padding: 0 !important;
         }
         
-        /* FORÇA os cards de métrica a fazerem um quadrado (2 em cima, 2 embaixo) */
+        /* Permite que colunas possam se comportar naturalmente */
         [data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-wrap: wrap !important;
             width: 100% !important;
-        }
-        [data-testid="column"] {
-            flex: 0 0 48% !important; /* Exatamente metade da largura */
-            max-width: 48% !important;
-            min-width: 48% !important;
-            margin-bottom: 5px !important;
         }
 
         /* Metric cards para impressão */
@@ -1038,12 +1032,17 @@ def _exibir_empresa(res):
     # ── SEÇÃO 1: RESUMO GERAL (Metrics) ──
     st.markdown('<div class="section-title">📋 Resumo Geral do Contrato</div>', unsafe_allow_html=True)
 
-    c1, c2, c3, c4 = st.columns(4)
+    # Linha 1: Focada no nome da empresa (Razão Social costuma ser longa)
+    c1, c2 = st.columns([2, 1])
     c1.metric("Razão Social", res["razao_social"])
     c2.metric("Funcionários Ativos", f'{res["qtd_ativos"]:,}'.replace(",", "."))
+
+    # Linha 2: Focada no Faturamento
+    c3, c4 = st.columns(2)
     c3.metric("Faturamento Total (R$)", f'R$ {res["faturamento_total"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."))
     c4.metric("Custo Mensalidade / Func.", f'R$ {res["custo_mensalidade_func"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."))
 
+    # Linha 3: Focada nas datas
     c5, c6, c7 = st.columns(3)
     c5.metric("Período Avaliado", res["periodo"])
     c6.metric("Meses Analisados", res["meses"])
