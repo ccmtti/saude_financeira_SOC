@@ -180,7 +180,7 @@ st.markdown("""
        ======================================== */
     @media print {
         @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 4mm 10mm;
         }
 
@@ -327,7 +327,15 @@ if not st.session_state["autenticado"]:
             submit = st.form_submit_button("Entrar no Sistema")
             
             if submit:
-                if usuario == "ccmt" and senha == "consulta@04109":
+                # Agora o sistema puxa a senha dos "Secrets" do Streamlit (ou usa um padrão caso rode localmente)
+                try:
+                    senha_correta = st.secrets.get("SENHA_SISTEMA", "consulta@04109")
+                    usuario_correto = st.secrets.get("USUARIO_SISTEMA", "ccmt")
+                except Exception:
+                    senha_correta = "consulta@04109"
+                    usuario_correto = "ccmt"
+
+                if usuario == usuario_correto and senha == senha_correta:
                     st.session_state["autenticado"] = True
                     st.rerun()
                 else:
@@ -340,9 +348,17 @@ if not st.session_state["autenticado"]:
 EMPRESA_LOGADA = "323506"
 WSDL_SOC_SOAP = "https://ws1.soc.com.br/WSSoc/services/ExportaDadosWs?wsdl"
 
-EXPORTA_FATURAMENTO = {"codigo": "187006", "chave": "fb996f2d1a16d2629600"}
-EXPORTA_FUNCIONARIOS = {"codigo": "217724", "chave": "d9bdc2c1010858b03175"}
-EXPORTA_PRECOS = {"codigo": "195953", "chave": "131d6afed38b86e21a03"}
+# Para deixar o GitHub "Público" de forma segura, as chaves do SOC devem ir para o "Secrets" do Streamlit!
+def get_soc_auth(nome_secret_cod, nome_secret_chave, default_cod, default_chave):
+    try:
+        return {"codigo": st.secrets[nome_secret_cod], "chave": st.secrets[nome_secret_chave]}
+    except Exception:
+        # Fallback de uso local (Não suba essas chaves reais num repositório público se possível)
+        return {"codigo": default_cod, "chave": default_chave}
+
+EXPORTA_FATURAMENTO = get_soc_auth("SOC_COD_FAT", "SOC_CHAVE_FAT", "187006", "fb996f2d1a16d2629600")
+EXPORTA_FUNCIONARIOS = get_soc_auth("SOC_COD_FUNC", "SOC_CHAVE_FUNC", "217724", "d9bdc2c1010858b03175")
+EXPORTA_PRECOS = get_soc_auth("SOC_COD_PRECO", "SOC_CHAVE_PRECO", "195953", "131d6afed38b86e21a03")
 
 # Trava para organizar as mensagens quando usar Multithreading
 print_lock = threading.Lock()
