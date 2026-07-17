@@ -221,7 +221,7 @@ st.markdown("""
             padding-bottom: 5px;
         }
 
-        /* Reset backgrounds para branco */
+        /* Reset backgrounds para branco e ativa zoom no Chrome */
         html, body,
         .main,
         .block-container,
@@ -236,9 +236,42 @@ st.markdown("""
             height: auto !important;
         }
 
-        .block-container {
+        /* O truque mágico para não cortar a direita no Retrato (Cross-browser) */
+        body, html {
+            zoom: 70% !important; /* Chrome, Edge, Safari */
+            width: 100% !important;
             max-width: 100% !important;
+            overflow-x: hidden !important; /* Esconde qualquer vazamento fantasma */
+        }
+
+        /* Fallback específico para o Mozilla Firefox */
+        @-moz-document url-prefix() {
+            body {
+                transform: scale(0.70) !important;
+                transform-origin: top left !important;
+                width: 142% !important;
+            }
+        }
+
+        /* BLINDAGEM DA LARGURA */
+        .block-container,
+        section[data-testid="stMain"],
+        [data-testid="stAppViewContainer"],
+        [data-testid="stAppViewBlockContainer"] {
+            max-width: 100% !important;
+            min-width: 100% !important;
+            width: 100% !important;
             padding: 0 !important;
+        }
+        
+        /* Permite que as colunas dos cards (Metrics) caiam pra linha de baixo se faltar espaço */
+        [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+        }
+        [data-testid="column"] {
+            min-width: 0 !important;
+            flex: 1 1 200px !important; /* Permite espremer e pular de linha */
+            margin-bottom: 10px !important;
         }
 
         /* Metric cards para impressão */
