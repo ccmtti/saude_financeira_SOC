@@ -592,13 +592,18 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     ).reset_index()
 
     if not df_precos.empty:
-        col_prod = 'codigoProduto' if 'codigoProduto' in df_precos.columns else 'CODIGOPRODUTO'
-        col_vmin = 'valorMinimo' if 'valorMinimo' in df_precos.columns else 'VALORMINIMO'
-        col_mvid = 'minimoVidas' if 'minimoVidas' in df_precos.columns else 'MINIMOVIDAS'
-        
-        # Novas colunas solicitadas para classificação de Mensalidade
-        col_vvm = 'valorVidaMes' if 'valorVidaMes' in df_precos.columns else 'VALORVIDAMES'
-        col_vm = 'valorMensal' if 'valorMensal' in df_precos.columns else 'VALORMENSAL'
+        # Helper para encontrar a coluna independente de ser Maiúscula ou Minúscula
+        def get_col(df, nome_alvo):
+            for c in df.columns:
+                if str(c).lower() == nome_alvo.lower():
+                    return c
+            return nome_alvo
+
+        col_prod = get_col(df_precos, 'codigoProduto')
+        col_vmin = get_col(df_precos, 'valorMinimo')
+        col_mvid = get_col(df_precos, 'minimoVidas')
+        col_vvm = get_col(df_precos, 'valorVidaMes')
+        col_vm = get_col(df_precos, 'valorMensal')
 
         # Garantir que extraímos as colunas que existem
         cols_extract = [col_prod, col_vmin, col_mvid]
@@ -700,6 +705,7 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     return {
         "razao_social": razao_social,
         "df_resumo_geral": df_resumo_geral,
+        "resumo_produtos": resumo_produtos, # Adicionado para corrigir a exportação multi-empresas
         "resumo_mensalidades": resumo_mensalidades,
         "resumo_demais": resumo_demais,
         "resumo_produtos_mensalidades": resumo_produtos_mensalidades,
