@@ -829,15 +829,15 @@ def gerar_pdf_em_memoria(resultados):
         if df_avulsos.empty:
             elements.append(Paragraph("Sem cobranças avulsas no período selecionado.", style_normal))
         else:
-            cols_avul = ["NOME_PRODUTO", "DESCRICAO", "VALOR_TOTAL_PRODUTO"]
+            cols_avul = ["DATA_COBRANCA", "NOME_PRODUTO", "VALOR_TOTAL_PRODUTO"]
             if all(c in df_avulsos.columns for c in cols_avul):
-                data_av = [["Produto", "Descrição", "Total (R$)"]]
+                data_av = [["Data", "Produto", "Total (R$)"]]
                 for _, row in df_avulsos.iterrows():
                     val = row["VALOR_TOTAL_PRODUTO"]
                     val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if isinstance(val, float) else str(val)
-                    data_av.append([str(row["NOME_PRODUTO"])[:35], str(row["DESCRICAO"])[:45], val_str])
+                    data_av.append([str(row["DATA_COBRANCA"])[:10], str(row["NOME_PRODUTO"])[:60], val_str])
                 
-                t_av = Table(data_av, colWidths=[5.5*cm, 9*cm, 3*cm], repeatRows=1)
+                t_av = Table(data_av, colWidths=[3*cm, 11*cm, 3.5*cm], repeatRows=1)
                 t_av.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009f8f")),
                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
