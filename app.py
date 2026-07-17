@@ -13,6 +13,13 @@ from dateutil.relativedelta import relativedelta
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import streamlit as st
 
+# Importações do ReportLab para PDF
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+
 # Desabilita logs longos e desnecessários da biblioteca na tela
 logging.getLogger('zeep').setLevel(logging.ERROR)
 
@@ -130,11 +137,6 @@ st.markdown("""
         overflow: hidden;
     }
 
-    /* ---------- Tabela e Métricas só para impressão ---------- */
-    .print-only-table, .print-only-status, .print-custom-metrics {
-        display: none !important;
-    }
-
     /* ---------- Download button ---------- */
     .stDownloadButton > button {
         background: linear-gradient(135deg, #007b6b, #009f8f) !important;
@@ -174,183 +176,6 @@ st.markdown("""
         box-shadow: 0 6px 22px rgba(0,159,143,.5) !important;
         transform: translateY(-2px);
     }
-
-    /* ========================================
-       IMPRESSÃO — A4 Paisagem
-       ======================================== */
-    @media print {
-        @page {
-            size: A4 portrait;
-            margin: 4mm 10mm;
-        }
-
-        /* Esconde elementos não imprimíveis */
-        section[data-testid="stSidebar"],
-        .stStatusWidget,
-        .stDeployButton,
-        header[data-testid="stHeader"],
-        .hero-banner,
-        .stDownloadButton,
-        .print-btn,
-        .stButton,
-        footer,
-        #MainMenu,
-        [data-testid="stToolbar"],
-        [data-testid="stStatusWidget"],
-        [data-testid="stExpander"],
-        iframe,
-        hr { display: none !important; }
-
-        /* Esconde o st.dataframe (canvas) — usamos tabela HTML no lugar */
-        .stDataFrame,
-        [data-testid="stDataFrame"] {
-            display: none !important;
-        }
-
-        /* MOSTRA a tabela HTML e o status só na impressão */
-        .print-only-table {
-            display: block !important;
-        }
-        .print-only-status {
-            display: block !important;
-            font-size: 0.85rem;
-            color: #005850;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #b0d4cf;
-            padding-bottom: 5px;
-        }
-
-        /* Reset backgrounds para branco e ativa zoom no Chrome */
-        html, body,
-        .main,
-        .block-container,
-        section[data-testid="stMain"],
-        [data-testid="stAppViewContainer"],
-        [data-testid="stAppViewBlockContainer"] {
-            background: white !important;
-            color: #111 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            overflow: visible !important;
-            height: auto !important;
-        }
-
-        /* Reset total da escala e largura para o padrão natural 100% */
-        body, html {
-            zoom: 100% !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        /* Fallback específico para o Mozilla Firefox */
-        @-moz-document url-prefix() {
-            body {
-                transform: none !important;
-                width: 100% !important;
-            }
-        }
-
-        .block-container {
-            padding: 0 !important;
-            max-width: 100% !important;
-        }
-
-        /* Esconde as métricas nativas do Streamlit na impressão */
-        div[data-testid="stMetric"], 
-        div[data-testid="stHorizontalBlock"] {
-            display: none !important;
-        }
-
-        /* Nossas "Caixas" de resumo exclusivas para impressão */
-        .print-custom-metrics {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 10px;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .print-box {
-            border: 1px solid #b0d4cf;
-            background: #f0faf8;
-            padding: 8px 12px;
-            border-radius: 6px;
-            box-sizing: border-box;
-            flex: 1 1 30%; /* 3 caixas por linha por padrão */
-        }
-
-        .print-box-large {
-            flex: 1 1 50%; /* Nome da empresa ocupa metade da linha */
-        }
-
-        .print-box label {
-            display: block;
-            color: #005850;
-            font-size: 8pt;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .print-box .val {
-            color: #111;
-            font-size: 11pt;
-            font-weight: 700;
-        }
-
-        /* Títulos de seção */
-        .section-title {
-            color: #005850 !important;
-            border-left-color: #009f8f !important;
-            font-size: .95rem !important;
-            margin: .8rem 0 .4rem !important;
-            break-after: avoid;
-        }
-
-        /* Estilo da tabela HTML de impressão */
-        .print-only-table table {
-            width: 100% !important;
-            border-collapse: collapse;
-            font-size: 9pt !important; /* Tamanho natural */
-            color: #111;
-            margin-bottom: .8rem;
-            table-layout: fixed !important; /* O SEGREDO para não deixar cortar a direita */
-        }
-        .print-only-table th {
-            background: #f0faf8;
-            color: #005850;
-            font-weight: 600;
-            border: 1px solid #b0d4cf;
-            padding: 4px;
-            text-align: left;
-            word-wrap: break-word !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-        }
-        .print-only-table td {
-            background: white;
-            color: #222;
-            border: 1px solid #cbd5e1;
-            padding: 4px;
-            word-wrap: break-word !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-        }
-        .print-only-table tr:nth-child(even) td {
-            background: #f8fdfb;
-        }
-
-        /* Info de avulsos vazio */
-        .print-info {
-            display: block !important;
-            font-size: .8rem;
-            color: #475569;
-            font-style: italic;
-            margin-top: .3rem;
-        }
-
         /* Evita quebras dentro de colunas */
         [data-testid="stHorizontalBlock"] {
             break-inside: avoid;
@@ -883,49 +708,154 @@ def gerar_excel_em_memoria(resultado):
     buf.seek(0)
     return buf
 
-
 # ==========================================
-# HELPER — Tabela HTML para impressão
+# GERAÇÃO DO RELATÓRIO PDF (NATIVO)
 # ==========================================
-def _df_to_print_html(df, col_labels=None):
-    """
-    Converte um DataFrame em uma tabela HTML envolta em <div class="print-only-table">.
-    Na tela fica escondida (display:none); na impressão aparece (display:block).
-    col_labels: dict com {nome_coluna_original: "Rótulo Amigável"}.
-    """
-    if col_labels is None:
-        col_labels = {c: c for c in df.columns}
+def gerar_pdf_em_memoria(resultados):
+    """Gera um relatório em PDF em memória usando ReportLab."""
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    
+    styles = getSampleStyleSheet()
+    style_title = styles['Title']
+    style_title.fontSize = 16
+    style_title.textColor = colors.HexColor("#005850")
+    
+    style_h2 = ParagraphStyle(name='Heading2Custom', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor("#007f73"), spaceAfter=8)
+    style_normal = styles['Normal']
+    
+    elements = []
+    
+    for idx, res in enumerate(resultados):
+        if idx > 0:
+            elements.append(PageBreak())
+            
+        elements.append(Paragraph(f"Saúde Financeira do Contrato - Empresa {res.get('empresa_codigo', '?')}", style_title))
+        elements.append(Paragraph(f"Gerado em: {res.get('data_coleta', '?')}", style_normal))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # 1. Dados Gerais
+        elements.append(Paragraph("1. Resumo Geral do Contrato", style_h2))
+        
+        dados_gerais = [
+            ["Razão Social", str(res["razao_social"])],
+            ["Funcionários Ativos", f'{res["qtd_ativos"]:,}'.replace(",", ".")],
+            ["Faturamento Total", f'R$ {res["faturamento_total"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")],
+            ["Custo Mensalidade / Func.", f'R$ {res["custo_mensalidade_func"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")],
+            ["Período Avaliado", str(res["periodo"])],
+            ["Meses Analisados", str(res["meses"])],
+            ["Data Assinatura Contrato", str(res["data_assinatura"])]
+        ]
+        
+        t_geral = Table(dados_gerais, colWidths=[5*cm, 12.5*cm])
+        t_geral.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f0faf8")),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor("#005850")),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#b0d4cf")),
+        ]))
+        elements.append(t_geral)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        def add_df_table(df, title, html_cols):
+            elements.append(Paragraph(title, style_h2))
+            if df.empty:
+                elements.append(Paragraph("Nenhum dado encontrado no período.", style_normal))
+                elements.append(Spacer(1, 0.5*cm))
+                return
+                
+            cols = [c for c in html_cols if c in df.columns]
+            headers = [html_cols[c] for c in cols]
+            data = [headers]
+            for _, row in df.iterrows():
+                row_data = []
+                for c in cols:
+                    val = row[c]
+                    if isinstance(val, float):
+                        if 'Vidas' in html_cols[c] and 'Mínimo' not in html_cols[c] and 'Min.' not in html_cols[c]:
+                            row_data.append(f"{val:.0f}")
+                        else:
+                            row_data.append(f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                    elif isinstance(val, int):
+                        row_data.append(str(val))
+                    else:
+                        row_data.append(str(val))
+                data.append(row_data)
+                
+            w_prod = 6.5*cm
+            w_rest = (17.5*cm - w_prod) / max(1, len(cols) - 1)
+            t = Table(data, colWidths=[w_prod] + [w_rest]*(len(cols)-1), repeatRows=1)
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009f8f")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ]))
+            for i in range(1, len(data)):
+                if i % 2 == 0:
+                    t.setStyle(TableStyle([('BACKGROUND', (0, i), (-1, i), colors.HexColor("#f8fdfb"))]))
+            elements.append(t)
+            elements.append(Spacer(1, 0.5*cm))
 
-    cols = [c for c in col_labels if c in df.columns]
-    headers = "".join(f"<th>{col_labels[c]}</th>" for c in cols)
+        html_cols_mens = {
+            "NOME_PRODUTO": "Produto",
+            "Total_Cobrado_Periodo": "Total (R$)",
+            "Media_Vidas_Cobradas": "Vidas",
+            "Custo_Medio_Por_Vida": "Custo/Vida",
+            "Faturamento_Minimo_Valor (R$)": "Fat. Mín.",
+            "Faturamento_Minimo_Vidas": "Min. Vidas"
+        }
+        html_cols_demais = {
+            "NOME_PRODUTO": "Produto",
+            "Total_Cobrado_Periodo": "Total (R$)",
+            "Media_Vidas_Cobradas": "Vidas",
+            "Custo_Medio_Por_Vida": "Custo/Vida"
+        }
+        add_df_table(res["resumo_mensalidades"], "2. Valores por Produto: Mensalidades", html_cols_mens)
+        add_df_table(res["resumo_demais"], "3. Valores por Produto: Demais Produtos", html_cols_demais)
+        
+        # Cobranças Avulsas
+        elements.append(Paragraph("4. Cobranças Avulsas", style_h2))
+        df_avulsos = res["avulsos_detalhado"]
+        if df_avulsos.empty:
+            elements.append(Paragraph("Sem cobranças avulsas no período selecionado.", style_normal))
+        else:
+            cols_avul = ["NOME_PRODUTO", "DESCRICAO", "VALOR_TOTAL_PRODUTO"]
+            if all(c in df_avulsos.columns for c in cols_avul):
+                data_av = [["Produto", "Descrição", "Total (R$)"]]
+                for _, row in df_avulsos.iterrows():
+                    val = row["VALOR_TOTAL_PRODUTO"]
+                    val_str = f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if isinstance(val, float) else str(val)
+                    data_av.append([str(row["NOME_PRODUTO"])[:35], str(row["DESCRICAO"])[:45], val_str])
+                
+                t_av = Table(data_av, colWidths=[5.5*cm, 9*cm, 3*cm], repeatRows=1)
+                t_av.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009f8f")),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 9),
+                    ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ]))
+                for i in range(1, len(data_av)):
+                    if i % 2 == 0:
+                        t_av.setStyle(TableStyle([('BACKGROUND', (0, i), (-1, i), colors.HexColor("#f8fdfb"))]))
+                elements.append(t_av)
 
-    rows = []
-    for _, row in df.iterrows():
-        cells = ""
-        for c in cols:
-            val = row[c]
-            if isinstance(val, float):
-                cells += f"<td style='text-align:right'>{val:,.2f}</td>".replace(",", "X").replace(".", ",").replace("X", ".")
-            elif isinstance(val, (int,)):
-                cells += f"<td style='text-align:right'>{val}</td>"
-            else:
-                cells += f"<td>{val}</td>"
-        rows.append(f"<tr>{cells}</tr>")
-
-    return (
-        '<div class="print-only-table">'
-        '<table style="width: 100% !important; max-width: 100% !important; table-layout: fixed !important;">'
-        '<colgroup>'
-        '<col style="width: 40%;">'
-        '<col style="width: 16%;">'
-        '<col style="width: 12%;">'
-        '<col style="width: 12%;">'
-        '<col style="width: 12%;">'
-        '<col style="width: 8%;">'
-        '</colgroup>'
-        f'<thead><tr>{headers}</tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></div>'
-    )
+    doc.build(elements)
+    buf.seek(0)
+    return buf
 
 
 # ==========================================
@@ -1051,7 +981,7 @@ def _exibir_empresa(res):
     # ── SEÇÃO 1: RESUMO GERAL (Metrics) ──
     st.markdown('<div class="section-title">📋 Resumo Geral do Contrato</div>', unsafe_allow_html=True)
 
-    # NATIVO STREAMLIT (Só aparece na tela normal)
+    # NATIVO STREAMLIT
     c1, c2 = st.columns([2, 1])
     c1.metric("Razão Social", res["razao_social"])
     c2.metric("Funcionários Ativos", f'{res["qtd_ativos"]:,}'.replace(",", "."))
@@ -1064,24 +994,6 @@ def _exibir_empresa(res):
     c5.metric("Período Avaliado", res["periodo"])
     c6.metric("Meses Analisados", res["meses"])
     c7.metric("Data Assinatura Contrato", str(res["data_assinatura"]))
-
-    # CUSTOMIZADO HTML (CAIXAS DIVs - Só aparece na impressão)
-    val_qtd = f'{res["qtd_ativos"]:,}'.replace(",", ".")
-    val_fat = f'R$ {res["faturamento_total"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")
-    val_custo = f'R$ {res["custo_mensalidade_func"]:,.2f}'.replace(",", "X").replace(".", ",").replace("X", ".")
-    
-    html_metrics = f"""
-    <div class="print-custom-metrics">
-        <div class="print-box print-box-large"><label>Razão Social</label><div class="val">{res["razao_social"]}</div></div>
-        <div class="print-box"><label>Funcionários Ativos</label><div class="val">{val_qtd}</div></div>
-        <div class="print-box"><label>Faturamento Total (R$)</label><div class="val">{val_fat}</div></div>
-        <div class="print-box"><label>Custo Mensalidade / Func.</label><div class="val">{val_custo}</div></div>
-        <div class="print-box"><label>Período Avaliado</label><div class="val">{res["periodo"]}</div></div>
-        <div class="print-box"><label>Meses Analisados</label><div class="val">{res["meses"]}</div></div>
-        <div class="print-box"><label>Data Assinatura Contrato</label><div class="val">{res["data_assinatura"]}</div></div>
-    </div>
-    """
-    st.markdown(html_metrics, unsafe_allow_html=True)
 
     # ── SEÇÃO 2: TABELAS DE PRODUTOS ──
     col_config = {
@@ -1109,7 +1021,6 @@ def _exibir_empresa(res):
         for col in df_mens.select_dtypes(include='number').columns:
             df_mens[col] = df_mens[col].round(2)
         st.dataframe(df_mens, use_container_width=True, hide_index=True, column_config=col_config)
-        st.markdown(_df_to_print_html(df_mens, html_cols), unsafe_allow_html=True)
     else:
         st.info("Nenhuma mensalidade encontrada no período.")
 
@@ -1120,7 +1031,6 @@ def _exibir_empresa(res):
         for col in df_demais.select_dtypes(include='number').columns:
             df_demais[col] = df_demais[col].round(2)
         st.dataframe(df_demais, use_container_width=True, hide_index=True, column_config=col_config)
-        st.markdown(_df_to_print_html(df_demais, html_cols), unsafe_allow_html=True)
     else:
         st.info("Nenhum outro produto cobrado no período.")
 
@@ -1146,16 +1056,6 @@ def _exibir_empresa(res):
                 "NOME_PRODUTO": st.column_config.TextColumn("Produto", width="large"),
                 "VALOR_TOTAL_PRODUTO": st.column_config.NumberColumn("Valor (R$)", format="R$ %.2f"),
             },
-        )
-
-        # Tabela HTML para impressão
-        st.markdown(
-            _df_to_print_html(avulsos_sem_vidas, {
-                "DATA_COBRANCA": "Data Cobrança",
-                "NOME_PRODUTO": "Produto",
-                "VALOR_TOTAL_PRODUTO": "Valor (R$)",
-            }),
-            unsafe_allow_html=True,
         )
 
 
@@ -1210,29 +1110,15 @@ if "resultados" in st.session_state:
             use_container_width=True,
         )
     with col_print:
-        import streamlit.components.v1 as components
-        components.html(
-            """
-            <button onclick="window.parent.print()"
-                    style="
-                        width: 100%;
-                        padding: 0.6rem 1rem;
-                        background: linear-gradient(135deg, #005850, #007b6b);
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        font-weight: 600;
-                        font-size: 0.92rem;
-                        cursor: pointer;
-                        letter-spacing: .02em;
-                        transition: all .2s ease;
-                        font-family: 'Inter', sans-serif;
-                    "
-                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,88,80,.4)'"
-                    onmouseout="this.style.transform='';this.style.boxShadow=''"
-            >🖨️&nbsp; Imprimir Relatório</button>
-            """,
-            height=50,
+        # Gera o PDF 
+        pdf_buf = gerar_pdf_em_memoria(resultados)
+        nome_pdf = nome_arquivo.replace(".xlsx", ".pdf")
+        st.download_button(
+            label="🖨️  Baixar PDF p/ Impressão",
+            data=pdf_buf,
+            file_name=nome_pdf,
+            mime="application/pdf",
+            use_container_width=True,
         )
 
 else:
