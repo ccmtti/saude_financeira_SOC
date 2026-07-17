@@ -236,43 +236,26 @@ st.markdown("""
             height: auto !important;
         }
 
-        /* Reset total da escala e largura para o padrão natural */
+        /* O truque mágico para não cortar a direita no Retrato (Cross-browser) */
         body, html {
-            zoom: 100% !important;
+            zoom: 75% !important; /* Retorna a 75% para garantir encaixe perfeito no papel */
             width: 100% !important;
-            max-width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow-x: hidden !important;
         }
 
         /* Fallback específico para o Mozilla Firefox */
         @-moz-document url-prefix() {
             body {
-                transform: none !important;
-                width: 100% !important;
+                transform: scale(0.75) !important;
+                transform-origin: top left !important;
+                width: 133% !important; /* Compensa a escala */
             }
         }
 
-        /* BLINDAGEM MÁXIMA DA LARGURA */
-        .block-container,
-        section[data-testid="stMain"],
-        [data-testid="stAppViewContainer"],
-        [data-testid="stAppViewBlockContainer"],
-        [data-testid="stMarkdownContainer"],
-        .print-only-table {
-            max-width: 100vw !important;
-            min-width: 100% !important;
-            width: 100% !important;
+        .block-container {
             padding: 0 !important;
-            box-sizing: border-box !important;
-        }
-        
-        /* Permite que colunas possam se comportar naturalmente */
-        [data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            width: 100% !important;
+            max-width: 100% !important;
         }
 
         /* Metric cards para impressão */
@@ -285,11 +268,11 @@ st.markdown("""
         }
         div[data-testid="stMetric"] label {
             color: #005850 !important;
-            font-size: .6rem !important;
+            font-size: .85rem !important; /* Aumenta a fonte pra compensar o zoom 75% */
         }
         div[data-testid="stMetric"] [data-testid="stMetricValue"] {
             color: #003d35 !important;
-            font-size: .78rem !important;
+            font-size: 1.15rem !important; /* Aumenta a fonte pra compensar o zoom 75% */
         }
 
         /* Títulos de seção */
@@ -304,9 +287,8 @@ st.markdown("""
         /* Estilo da tabela HTML de impressão */
         .print-only-table table {
             width: 100% !important;
-            max-width: 100% !important;
             border-collapse: collapse;
-            font-size: 9pt !important; /* Tamanho confortável para leitura em papel */
+            font-size: 13pt !important; /* 13pt * 0.75 (zoom) = ~10pt reais legíveis! */
             color: #111;
             margin-bottom: .8rem;
             table-layout: fixed !important; /* O SEGREDO para não deixar cortar a direita */
