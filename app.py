@@ -648,8 +648,11 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
         resumo_produtos.rename(columns={'Ultima_Qtd_Vidas': 'Media_Vidas_Cobradas'}, inplace=True)
 
     # Identifica se é mensalidade pelo NOME ou pela REGRA DE PREÇO (SOC)
+    nome_prod_resumo_upper = resumo_produtos['NOME_PRODUTO'].astype(str).str.upper()
     mask_mens = (
-        resumo_produtos['NOME_PRODUTO'].astype(str).str.upper().str.startswith('MENSALIDADE', na=False) |
+        nome_prod_resumo_upper.str.startswith('MENSALIDADE', na=False) |
+        nome_prod_resumo_upper.str.startswith('MENSAGERIA', na=False) |
+        nome_prod_resumo_upper.str.startswith('ENVIO DIRETO', na=False) |
         resumo_produtos['CODIGO_PRODUTO'].isin(codigos_mensalidades)
     )
 
@@ -667,6 +670,8 @@ def processar_dados(df_fat, df_precos, qtd_ativos, meses_historico):
     
     mask_mensalidade_df = (
         nome_produto_upper.str.startswith('MENSALIDADE', na=False) |
+        nome_produto_upper.str.startswith('MENSAGERIA', na=False) |
+        nome_produto_upper.str.startswith('ENVIO DIRETO', na=False) |
         df_fat['CODIGO_PRODUTO'].isin(codigos_mensalidades)
     )
     mask_exames = nome_produto_upper.str.startswith('EXAME', na=False)
